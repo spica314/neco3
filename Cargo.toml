@@ -2,4 +2,5 @@
 members = [
     "bootstrap/neco",
     "bootstrap/neco-syn",
+    "bootstrap/neco-ir",
 ]
