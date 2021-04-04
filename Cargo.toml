@@ -1,6 +1,6 @@
 [workspace]
 members = [
-    "bootstrap/neco",
-    "bootstrap/neco-syn",
-    "bootstrap/neco-ir",
+    "src/neco",
+    "src/neco-syn",
+    "src/neco-ir",
 ]
