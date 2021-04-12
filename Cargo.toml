@@ -3,4 +3,5 @@ members = [
     "src/neco",
     "src/neco-syn",
     "src/neco-ir",
+    "src/neco-types-and-values",
 ]
