@@ -8,7 +8,7 @@ use bit_vector::BitVector;
 pub struct TypeId(usize);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct AnnotateId(usize);
+pub struct AnnotationId(usize);
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Type {
@@ -33,7 +33,7 @@ pub enum Value {
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum TypeRel {
-    Same(AnnotateId, AnnotateId),
+    Same(AnnotationId, AnnotationId),
 }
 
 
@@ -50,8 +50,8 @@ impl Annotator {
             type_rels: vec![],
         }
     }
-    pub fn create_annotate(&mut self, ty: Type) -> AnnotateId {
-        let res = AnnotateId(self.annotates.len());
+    pub fn create_annotate(&mut self, ty: Type) -> AnnotationId {
+        let res = AnnotationId(self.annotates.len());
         self.annotates.push(ty);
         res
     }
@@ -80,7 +80,7 @@ impl Annotator {
             }
         }
     }
-    fn infer_same(&mut self, id1: AnnotateId, id2: AnnotateId) -> bool {
+    fn infer_same(&mut self, id1: AnnotationId, id2: AnnotationId) -> bool {
         match (&self.annotates[id1.0], &self.annotates[id2.0]) {
             (Type::Bool, Type::Bool) => false,
             (Type::Bool, Type::Int(_)) => panic!(),
@@ -124,10 +124,10 @@ impl Annotator {
             (Type::InferInteger, Type::InferInteger) => false,
         }
     }
-    pub fn same(&mut self, left: AnnotateId, right: AnnotateId) {
+    pub fn same(&mut self, left: AnnotationId, right: AnnotationId) {
         self.type_rels.push(TypeRel::Same(left, right));
     }
-    pub fn get_ty(&self, id: AnnotateId) -> Type {
+    pub fn get_ty(&self, id: AnnotationId) -> Type {
         self.annotates[id.0].clone()
     }
 }
