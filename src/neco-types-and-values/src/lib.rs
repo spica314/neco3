@@ -124,8 +124,10 @@ impl Annotator {
             (Type::InferInteger, Type::InferInteger) => false,
         }
     }
-    pub fn same(&mut self, left: AnnotationId, right: AnnotationId) {
-        self.type_rels.push(TypeRel::Same(left, right));
+    pub fn same(&mut self, xs: &[AnnotationId]) {
+        for ids in xs.windows(2) {
+            self.type_rels.push(TypeRel::Same(ids[0], ids[1]));
+        }
     }
     pub fn get_ty(&self, id: AnnotationId) -> Type {
         self.annotates[id.0].clone()
@@ -143,9 +145,7 @@ mod tests {
         let left = annotator.create_annotate(Type::InferInteger);
         let right = annotator.create_annotate(Type::InferInteger);
         let res = annotator.create_annotate(Type::Infer);
-        annotator.same(left, right);
-        annotator.same(res, left);
-        annotator.same(res, right);
+        annotator.same(&[res, left, right]);
         annotator.annotate(Type::Int(32));
         let ty_left = annotator.get_ty(left);
         let ty_right = annotator.get_ty(right);
@@ -162,13 +162,9 @@ mod tests {
         let id_x = annotator.create_annotate(Type::Infer);
         let id_2 = annotator.create_annotate(Type::InferInteger);
         let x_times_2 = annotator.create_annotate(Type::Infer);
-        annotator.same(id_x, id_2);
-        annotator.same(x_times_2, id_x);
-        annotator.same(x_times_2, id_2);
+        annotator.same(&[id_x, id_2, x_times_2]);
         let res = annotator.create_annotate(Type::Infer);
-        annotator.same(id_x, x_times_2);
-        annotator.same(res, id_x);
-        annotator.same(res, x_times_2);
+        annotator.same(&[id_x, x_times_2, res]);
         annotator.annotate(Type::Int(32));
         assert_eq!(annotator.get_ty(id_x), Type::Int(32));
         assert_eq!(annotator.get_ty(id_2), Type::Int(32));
