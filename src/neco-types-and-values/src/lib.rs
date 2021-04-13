@@ -8,10 +8,7 @@ use bit_vector::BitVector;
 pub struct TypeId(usize);
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct ValueId(usize);
-
-#[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub struct VariableId(usize);
+pub struct AnnotateId(usize);
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Type {
@@ -32,43 +29,35 @@ pub enum Value {
     IntString {
         s: String,
     },
-    Variable {
-        variable_id: VariableId,
-    },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum TypeRel {
-    Same(ValueId, ValueId),
+    Same(AnnotateId, AnnotateId),
 }
 
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Annotator {
-    values: Vec<(Option<Value>, Type)>,
+    annotates: Vec<Type>,
     type_rels: Vec<TypeRel>,
 }
 
 impl Annotator {
     pub fn new() -> Annotator {
         Annotator {
-            values: vec![],
+            annotates: vec![],
             type_rels: vec![],
         }
     }
-    pub fn create_value(&mut self, value: Option<Value>, ty: Type) -> ValueId {
-        let res = ValueId(self.values.len());
-        self.values.push((value, ty));
-        res
-    }
-    pub fn create_annotate(&mut self, ty: Type) -> ValueId {
-        let res = ValueId(self.values.len());
-        self.values.push((None, ty));
+    pub fn create_annotate(&mut self, ty: Type) -> AnnotateId {
+        let res = AnnotateId(self.annotates.len());
+        self.annotates.push(ty);
         res
     }
     pub fn annotate(&mut self, default_integer_type: Type) {
         self.annotate_sub();
-        for (_, ty) in self.values.iter_mut() {
+        for ty in self.annotates.iter_mut() {
             if *ty == Type::InferInteger {
                 *ty = default_integer_type.clone();
             }
@@ -91,55 +80,55 @@ impl Annotator {
             }
         }
     }
-    fn infer_same(&mut self, id1: ValueId, id2: ValueId) -> bool {
-        match (&self.values[id1.0].1, &self.values[id2.0].1) {
+    fn infer_same(&mut self, id1: AnnotateId, id2: AnnotateId) -> bool {
+        match (&self.annotates[id1.0], &self.annotates[id2.0]) {
             (Type::Bool, Type::Bool) => false,
             (Type::Bool, Type::Int(_)) => panic!(),
             (Type::Bool, Type::Infer) => {
-                self.values[id2.0].1 = Type::Bool;
+                self.annotates[id2.0] = Type::Bool;
                 true
             }
             (Type::Bool, Type::InferInteger) => panic!(),
             (Type::Int(_), Type::Bool) => panic!(),
             (Type::Int(_), Type::Int(_)) => false,
             (Type::Int(_), Type::Infer) => {
-                self.values[id2.0].1 = self.values[id1.0].1.clone();
+                self.annotates[id2.0] = self.annotates[id1.0].clone();
                 true
             }
             (Type::Int(_), Type::InferInteger) => {
-                self.values[id2.0].1 = self.values[id1.0].1.clone();
+                self.annotates[id2.0] = self.annotates[id1.0].clone();
                 true
             }
             (Type::Infer, Type::Bool) => {
-                self.values[id1.0].1 = Type::Bool;
+                self.annotates[id1.0] = Type::Bool;
                 true
             }
             (Type::Infer, Type::Int(_)) => {
-                self.values[id1.0].1 = self.values[id2.0].1.clone();
+                self.annotates[id1.0] = self.annotates[id2.0].clone();
                 true
             }
             (Type::Infer, Type::Infer) => false,
             (Type::Infer, Type::InferInteger) => {
-                self.values[id1.0].1 = self.values[id2.0].1.clone();
+                self.annotates[id1.0] = self.annotates[id2.0].clone();
                 true
             }
             (Type::InferInteger, Type::Bool) => panic!(),
             (Type::InferInteger, Type::Int(_)) => {
-                self.values[id1.0].1 = self.values[id2.0].1.clone();
+                self.annotates[id1.0] = self.annotates[id2.0].clone();
                 true
             }
             (Type::InferInteger, Type::Infer) => {
-                self.values[id2.0].1 = self.values[id1.0].1.clone();
+                self.annotates[id2.0] = self.annotates[id1.0].clone();
                 true
             }
             (Type::InferInteger, Type::InferInteger) => false,
         }
     }
-    pub fn same(&mut self, left: ValueId, right: ValueId) {
+    pub fn same(&mut self, left: AnnotateId, right: AnnotateId) {
         self.type_rels.push(TypeRel::Same(left, right));
     }
-    pub fn get_ty(&self, id: ValueId) -> Type {
-        self.values[id.0].1.clone()
+    pub fn get_ty(&self, id: AnnotateId) -> Type {
+        self.annotates[id.0].clone()
     }
 }
 
@@ -151,9 +140,9 @@ mod tests {
     fn test_annotator_1() {
         // 1 + 2
         let mut annotator = Annotator::new();
-        let left = annotator.create_value(Some(Value::IntString{ s: "1".to_string() }), Type::InferInteger);
-        let right = annotator.create_value(Some(Value::IntString{ s: "2".to_string() }), Type::InferInteger);
-        let res = annotator.create_value(None, Type::Infer);
+        let left = annotator.create_annotate(Type::InferInteger);
+        let right = annotator.create_annotate(Type::InferInteger);
+        let res = annotator.create_annotate(Type::Infer);
         annotator.same(left, right);
         annotator.same(res, left);
         annotator.same(res, right);
@@ -171,7 +160,7 @@ mod tests {
         // x + x * 2
         let mut annotator = Annotator::new();
         let id_x = annotator.create_annotate(Type::Infer);
-        let id_2 = annotator.create_value(Some(Value::IntString{ s: "3".to_string() }), Type::InferInteger);
+        let id_2 = annotator.create_annotate(Type::InferInteger);
         let x_times_2 = annotator.create_annotate(Type::Infer);
         annotator.same(id_x, id_2);
         annotator.same(x_times_2, id_x);
