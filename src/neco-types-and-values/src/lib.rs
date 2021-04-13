@@ -61,6 +61,11 @@ impl Annotator {
         self.values.push((value, ty));
         res
     }
+    pub fn create_annotate(&mut self, ty: Type) -> ValueId {
+        let res = ValueId(self.values.len());
+        self.values.push((None, ty));
+        res
+    }
     pub fn annotate(&mut self, default_integer_type: Type) {
         self.annotate_sub();
         for (_, ty) in self.values.iter_mut() {
@@ -141,6 +146,7 @@ impl Annotator {
 #[cfg(test)]
 mod tests {
     use super::*;
+
     #[test]
     fn test_annotator_1() {
         // 1 + 2
@@ -158,5 +164,24 @@ mod tests {
         assert_eq!(ty_left, Type::Int(32));
         assert_eq!(ty_right, Type::Int(32));
         assert_eq!(ty_res, Type::Int(32));
+    }
+
+    #[test]
+    fn test_annotator_2() {
+        // x + x * 2
+        let mut annotator = Annotator::new();
+        let id_x = annotator.create_annotate(Type::Infer);
+        let id_2 = annotator.create_value(Some(Value::IntString{ s: "3".to_string() }), Type::InferInteger);
+        let x_times_2 = annotator.create_annotate(Type::Infer);
+        annotator.same(id_x, id_2);
+        annotator.same(x_times_2, id_x);
+        annotator.same(x_times_2, id_2);
+        let res = annotator.create_annotate(Type::Infer);
+        annotator.same(id_x, x_times_2);
+        annotator.same(res, id_x);
+        annotator.same(res, x_times_2);
+        annotator.annotate(Type::Int(32));
+        assert_eq!(annotator.get_ty(id_x), Type::Int(32));
+        assert_eq!(annotator.get_ty(id_2), Type::Int(32));
     }
 }
