@@ -50,7 +50,7 @@ impl Annotator {
             type_rels: vec![],
         }
     }
-    pub fn create_annotate(&mut self, ty: Type) -> AnnotationId {
+    pub fn create_annotation(&mut self, ty: Type) -> AnnotationId {
         let res = AnnotationId(self.annotates.len());
         self.annotates.push(ty);
         res
@@ -142,9 +142,9 @@ mod tests {
     fn test_annotator_1() {
         // 1 + 2
         let mut annotator = Annotator::new();
-        let left = annotator.create_annotate(Type::InferInteger);
-        let right = annotator.create_annotate(Type::InferInteger);
-        let res = annotator.create_annotate(Type::Infer);
+        let left = annotator.create_annotation(Type::InferInteger);
+        let right = annotator.create_annotation(Type::InferInteger);
+        let res = annotator.create_annotation(Type::Infer);
         annotator.same(&[res, left, right]);
         annotator.annotate(Type::Int(32));
         let ty_left = annotator.get_ty(left);
@@ -159,11 +159,11 @@ mod tests {
     fn test_annotator_2() {
         // x + x * 2
         let mut annotator = Annotator::new();
-        let id_x = annotator.create_annotate(Type::Infer);
-        let id_2 = annotator.create_annotate(Type::InferInteger);
-        let x_times_2 = annotator.create_annotate(Type::Infer);
+        let id_x = annotator.create_annotation(Type::Infer);
+        let id_2 = annotator.create_annotation(Type::InferInteger);
+        let x_times_2 = annotator.create_annotation(Type::Infer);
         annotator.same(&[id_x, id_2, x_times_2]);
-        let res = annotator.create_annotate(Type::Infer);
+        let res = annotator.create_annotation(Type::Infer);
         annotator.same(&[id_x, x_times_2, res]);
         annotator.annotate(Type::Int(32));
         assert_eq!(annotator.get_ty(id_x), Type::Int(32));
