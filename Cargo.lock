@@ -13,5 +13,9 @@ name = "neco-syn"
 version = "0.1.0"
 
 [[package]]
+name = "neco-table"
+version = "0.1.0"
+
+[[package]]
 name = "neco-types-and-values"
 version = "0.1.0"
