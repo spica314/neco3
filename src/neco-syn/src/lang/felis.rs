@@ -1,5 +1,5 @@
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
-pub enum TokenTree {
+pub enum TokenNode {
     Symbol(char),
     Ident(String),
     Number(String),
@@ -23,7 +23,7 @@ impl TokenRange {
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Tokens {
-    tokens: Vec<(TokenRange, TokenTree)>,
+    tokens: Vec<(TokenRange, TokenNode)>,
 }
 
 impl Tokens {
@@ -51,7 +51,7 @@ impl Tokens {
                     break;
                 }
                 let end = (pos_y, pos_x);
-                tokens.push((TokenRange::new(begin, end), TokenTree::Spaces));
+                tokens.push((TokenRange::new(begin, end), TokenNode::Spaces));
                 continue;
             }
             if cs[i].is_ascii_digit() {
@@ -68,7 +68,7 @@ impl Tokens {
                 }
                 let end = (pos_y, pos_x);
                 let s: String = buf.iter().collect();
-                tokens.push((TokenRange::new(begin, end), TokenTree::Number(s)));
+                tokens.push((TokenRange::new(begin, end), TokenNode::Number(s)));
                 continue;
             }
             if cs[i].is_ascii_alphabetic() || cs[i] == '_' {
@@ -85,7 +85,7 @@ impl Tokens {
                 }
                 let end = (pos_y, pos_x);
                 let s: String = buf.iter().collect();
-                tokens.push((TokenRange::new(begin, end), TokenTree::Ident(s)));
+                tokens.push((TokenRange::new(begin, end), TokenNode::Ident(s)));
                 continue;
             }
             {
@@ -94,7 +94,7 @@ impl Tokens {
                 pos_x += 1;
                 i += 1;
                 let end = (pos_y, pos_x);
-                tokens.push((TokenRange::new(begin, end), TokenTree::Symbol(c)));
+                tokens.push((TokenRange::new(begin, end), TokenNode::Symbol(c)));
             }
         }
         Tokens {
@@ -113,15 +113,15 @@ mod tests {
         let tokens = Tokens::new(s);
         let right = Tokens {
             tokens: vec![
-                (TokenRange::new((1,1),(1,2)), TokenTree::Number("1".to_string())),
-                (TokenRange::new((1,2),(1,3)), TokenTree::Spaces),
-                (TokenRange::new((1,3),(1,4)), TokenTree::Symbol('+')),
-                (TokenRange::new((1,4),(1,5)), TokenTree::Spaces),
-                (TokenRange::new((1,5),(1,6)), TokenTree::Number("2".to_string())),
-                (TokenRange::new((1,6),(1,7)), TokenTree::Spaces),
-                (TokenRange::new((1,7),(1,8)), TokenTree::Symbol('*')),
-                (TokenRange::new((1,8),(1,9)), TokenTree::Spaces),
-                (TokenRange::new((1,9),(1,10)), TokenTree::Number("3".to_string())),
+                (TokenRange::new((1,1),(1,2)), TokenNode::Number("1".to_string())),
+                (TokenRange::new((1,2),(1,3)), TokenNode::Spaces),
+                (TokenRange::new((1,3),(1,4)), TokenNode::Symbol('+')),
+                (TokenRange::new((1,4),(1,5)), TokenNode::Spaces),
+                (TokenRange::new((1,5),(1,6)), TokenNode::Number("2".to_string())),
+                (TokenRange::new((1,6),(1,7)), TokenNode::Spaces),
+                (TokenRange::new((1,7),(1,8)), TokenNode::Symbol('*')),
+                (TokenRange::new((1,8),(1,9)), TokenNode::Spaces),
+                (TokenRange::new((1,9),(1,10)), TokenNode::Number("3".to_string())),
             ],
         };
         assert_eq!(tokens, right);
@@ -133,15 +133,15 @@ mod tests {
         let tokens = Tokens::new(s);
         let right = Tokens {
             tokens: vec![
-                (TokenRange::new((1,1),(1,4)), TokenTree::Ident("abc".to_string())),
-                (TokenRange::new((1,4),(1,5)), TokenTree::Spaces),
-                (TokenRange::new((1,5),(1,6)), TokenTree::Symbol('+')),
-                (TokenRange::new((1,6),(1,7)), TokenTree::Spaces),
-                (TokenRange::new((1,7),(1,10)), TokenTree::Ident("d_e".to_string())),
-                (TokenRange::new((1,10),(1,11)), TokenTree::Spaces),
-                (TokenRange::new((1,11),(1,12)), TokenTree::Symbol('*')),
-                (TokenRange::new((1,12),(1,13)), TokenTree::Spaces),
-                (TokenRange::new((1,13),(1,15)), TokenTree::Ident("_f".to_string())),
+                (TokenRange::new((1,1),(1,4)), TokenNode::Ident("abc".to_string())),
+                (TokenRange::new((1,4),(1,5)), TokenNode::Spaces),
+                (TokenRange::new((1,5),(1,6)), TokenNode::Symbol('+')),
+                (TokenRange::new((1,6),(1,7)), TokenNode::Spaces),
+                (TokenRange::new((1,7),(1,10)), TokenNode::Ident("d_e".to_string())),
+                (TokenRange::new((1,10),(1,11)), TokenNode::Spaces),
+                (TokenRange::new((1,11),(1,12)), TokenNode::Symbol('*')),
+                (TokenRange::new((1,12),(1,13)), TokenNode::Spaces),
+                (TokenRange::new((1,13),(1,15)), TokenNode::Ident("_f".to_string())),
             ],
         };
         assert_eq!(tokens, right);
