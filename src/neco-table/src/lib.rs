@@ -56,13 +56,38 @@ impl<T> IdManager<T> {
 }
 
 #[derive(Debug, Clone)]
-pub struct Table<T, U> {
+pub struct MainTable<T> {
+    map: HashMap<Id<T>, T>,
+}
+
+impl<T> MainTable<T> {
+    pub fn new() -> MainTable<T> {
+        MainTable::<T> {
+            map: HashMap::new(),
+        }
+    }
+    pub fn insert(&mut self, x: T) -> Id<T> {
+        let id = Id::<T> {
+            id: self.map.len() + 1,
+            phantom: PhantomData,
+        };
+        self.map.insert(id, x);
+        id
+    }
+    pub fn get(&self, id: Id<T>) -> Option<&T> {
+        self.map.get(&id)
+    }
+}
+
+
+#[derive(Debug, Clone)]
+pub struct SubTable<T, U> {
     map: HashMap<Id<T>, U>,
 }
 
-impl<T, U> Table<T, U> {
-    pub fn new() -> Table<T, U> {
-        Table::<T, U> {
+impl<T, U> SubTable<T, U> {
+    pub fn new() -> SubTable<T, U> {
+        SubTable::<T, U> {
             map: HashMap::new(),
         }
     }
@@ -78,21 +103,22 @@ impl<T, U> Table<T, U> {
 mod tests {
     use super::*;
 
-    struct Variable;
+    #[derive(Debug, PartialEq, Eq)]
+    struct Variable(String);
 
     struct VariableTable {
-        id_manager: IdManager<Variable>,
-        name: Table<Variable, String>,
+        variables: MainTable<Variable>,
+        visited: SubTable<Variable, bool>,
     }
 
     #[test]
     fn neco_table_test_1() {
         let mut variable_table = VariableTable {
-            id_manager: IdManager::new(),
-            name: Table::new(),
+            variables: MainTable::new(),
+            visited: SubTable::new(),
         };
-        let id1 = variable_table.id_manager.create();
-        variable_table.name.insert(id1, "a".to_string());
-        assert_eq!(variable_table.name.get(id1), Some(&"a".to_string()));
+        let id = variable_table.variables.insert(Variable("name".to_string()));
+        variable_table.visited.insert(id, true);
+        assert_eq!(variable_table.variables.get(id), Some(&Variable("name".to_string())));
     }
 }
