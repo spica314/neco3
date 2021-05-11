@@ -1,6 +1,7 @@
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum TokenTree {
     Symbol(char),
+    Ident(String),
     Number(String),
     Spaces,
 }
@@ -57,7 +58,7 @@ impl Tokens {
                 let begin = (pos_y, pos_x);
                 let mut buf = vec![];
                 while i < cs.len() {
-                    if cs[i].is_ascii_digit() {
+                    if cs[i].is_ascii_digit() || cs[i] == '_' {
                         buf.push(cs[i]);
                         pos_x += 1;
                         i += 1;
@@ -70,8 +71,21 @@ impl Tokens {
                 tokens.push((TokenRange::new(begin, end), TokenTree::Number(s)));
                 continue;
             }
-            if cs[i].is_ascii_alphabetic() {
-                unimplemented!();
+            if cs[i].is_ascii_alphabetic() || cs[i] == '_' {
+                let begin = (pos_y, pos_x);
+                let mut buf = vec![];
+                while i < cs.len() {
+                    if cs[i].is_ascii_alphanumeric() || cs[i] == '_' {
+                        buf.push(cs[i]);
+                        pos_x += 1;
+                        i += 1;
+                        continue;
+                    }
+                    break;
+                }
+                let end = (pos_y, pos_x);
+                let s: String = buf.iter().collect();
+                tokens.push((TokenRange::new(begin, end), TokenTree::Ident(s)));
                 continue;
             }
             {
@@ -108,6 +122,26 @@ mod tests {
                 (TokenRange::new((1,7),(1,8)), TokenTree::Symbol('*')),
                 (TokenRange::new((1,8),(1,9)), TokenTree::Spaces),
                 (TokenRange::new((1,9),(1,10)), TokenTree::Number("3".to_string())),
+            ],
+        };
+        assert_eq!(tokens, right);
+    }
+
+    #[test]
+    fn test_tokens_new_2() {
+        let s = r#"abc + d_e * _f"#;
+        let tokens = Tokens::new(s);
+        let right = Tokens {
+            tokens: vec![
+                (TokenRange::new((1,1),(1,4)), TokenTree::Ident("abc".to_string())),
+                (TokenRange::new((1,4),(1,5)), TokenTree::Spaces),
+                (TokenRange::new((1,5),(1,6)), TokenTree::Symbol('+')),
+                (TokenRange::new((1,6),(1,7)), TokenTree::Spaces),
+                (TokenRange::new((1,7),(1,10)), TokenTree::Ident("d_e".to_string())),
+                (TokenRange::new((1,10),(1,11)), TokenTree::Spaces),
+                (TokenRange::new((1,11),(1,12)), TokenTree::Symbol('*')),
+                (TokenRange::new((1,12),(1,13)), TokenTree::Spaces),
+                (TokenRange::new((1,13),(1,15)), TokenTree::Ident("_f".to_string())),
             ],
         };
         assert_eq!(tokens, right);
