@@ -1,9 +1,34 @@
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+use neco_table::{Id, MainTable};
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
 pub enum TokenNode {
-    Symbol(char),
-    Ident(String),
-    Number(String),
-    Spaces,
+    Symbol(TokenSymbol),
+    Ident(TokenIdent),
+    Number(TokenNumber),
+    Spaces(TokenSpaces),
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct TokenSymbol {
+    pub range: TokenRange,
+    pub c: char,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct TokenIdent {
+    pub range: TokenRange,
+    pub ident: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct TokenNumber {
+    pub range: TokenRange,
+    pub number: String,
+}
+
+#[derive(Debug, Clone, PartialEq, Eq, Hash)]
+pub struct TokenSpaces {
+    pub range: TokenRange,
 }
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
@@ -21,16 +46,18 @@ impl TokenRange {
     }
 }
 
-#[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
+#[derive(Debug, Clone)]
 pub struct Tokens {
-    tokens: Vec<(TokenRange, TokenNode)>,
+    token_table: MainTable<TokenNode>,
+    root_tokens: Vec<Id<TokenNode>>,
 }
 
 impl Tokens {
     pub fn new(s: &str) -> Tokens {
         let mut pos_y = 1;
         let mut pos_x = 1;
-        let mut tokens = vec![];
+        let mut token_table = MainTable::new();
+        let mut root_tokens = vec![];
         let cs: Vec<char> = s.chars().collect();
         let mut i = 0;
         while i < cs.len() {
@@ -51,7 +78,11 @@ impl Tokens {
                     break;
                 }
                 let end = (pos_y, pos_x);
-                tokens.push((TokenRange::new(begin, end), TokenNode::Spaces));
+                let node = TokenNode::Spaces(TokenSpaces {
+                    range: TokenRange::new(begin, end),
+                });
+                let id = token_table.insert(node);
+                root_tokens.push(id);
                 continue;
             }
             if cs[i].is_ascii_digit() {
@@ -68,7 +99,12 @@ impl Tokens {
                 }
                 let end = (pos_y, pos_x);
                 let s: String = buf.iter().collect();
-                tokens.push((TokenRange::new(begin, end), TokenNode::Number(s)));
+                let node = TokenNode::Number(TokenNumber {
+                    range: TokenRange::new(begin, end),
+                    number: s,
+                });
+                let id = token_table.insert(node);
+                root_tokens.push(id);
                 continue;
             }
             if cs[i].is_ascii_alphabetic() || cs[i] == '_' {
@@ -85,7 +121,12 @@ impl Tokens {
                 }
                 let end = (pos_y, pos_x);
                 let s: String = buf.iter().collect();
-                tokens.push((TokenRange::new(begin, end), TokenNode::Ident(s)));
+                let node = TokenNode::Ident(TokenIdent {
+                    range: TokenRange::new(begin, end),
+                    ident: s,
+                });
+                let id = token_table.insert(node);
+                root_tokens.push(id);
                 continue;
             }
             {
@@ -94,11 +135,17 @@ impl Tokens {
                 pos_x += 1;
                 i += 1;
                 let end = (pos_y, pos_x);
-                tokens.push((TokenRange::new(begin, end), TokenNode::Symbol(c)));
+                let node = TokenNode::Symbol(TokenSymbol {
+                    range: TokenRange::new(begin, end),
+                    c,
+                });
+                let id = token_table.insert(node);
+                root_tokens.push(id);
             }
         }
         Tokens {
-            tokens,
+            token_table,
+            root_tokens,
         }
     }
 }
@@ -111,39 +158,39 @@ mod tests {
     fn test_tokens_new_1() {
         let s = r#"1 + 2 * 3"#;
         let tokens = Tokens::new(s);
-        let right = Tokens {
-            tokens: vec![
-                (TokenRange::new((1,1),(1,2)), TokenNode::Number("1".to_string())),
-                (TokenRange::new((1,2),(1,3)), TokenNode::Spaces),
-                (TokenRange::new((1,3),(1,4)), TokenNode::Symbol('+')),
-                (TokenRange::new((1,4),(1,5)), TokenNode::Spaces),
-                (TokenRange::new((1,5),(1,6)), TokenNode::Number("2".to_string())),
-                (TokenRange::new((1,6),(1,7)), TokenNode::Spaces),
-                (TokenRange::new((1,7),(1,8)), TokenNode::Symbol('*')),
-                (TokenRange::new((1,8),(1,9)), TokenNode::Spaces),
-                (TokenRange::new((1,9),(1,10)), TokenNode::Number("3".to_string())),
-            ],
-        };
-        assert_eq!(tokens, right);
+        assert!(tokens.root_tokens.len() == 9);
+        let left: Vec<_> = tokens.root_tokens.iter().map(|x| tokens.token_table.get(*x).unwrap().clone() ).collect();
+        let right = vec![
+            TokenNode::Number(TokenNumber{ range: TokenRange::new((1,1),(1,2)), number: "1".to_string() }),
+            TokenNode::Spaces(TokenSpaces{ range: TokenRange::new((1,2),(1,3)) }),
+            TokenNode::Symbol(TokenSymbol{ range: TokenRange::new((1,3),(1,4)), c: '+' }),
+            TokenNode::Spaces(TokenSpaces{ range: TokenRange::new((1,4),(1,5)) }),
+            TokenNode::Number(TokenNumber{ range: TokenRange::new((1,5),(1,6)), number: "2".to_string() }),
+            TokenNode::Spaces(TokenSpaces{ range: TokenRange::new((1,6),(1,7)) }),
+            TokenNode::Symbol(TokenSymbol{ range: TokenRange::new((1,7),(1,8)), c: '*' }),
+            TokenNode::Spaces(TokenSpaces{ range: TokenRange::new((1,8),(1,9)) }),
+            TokenNode::Number(TokenNumber{ range: TokenRange::new((1,9),(1,10)), number: "3".to_string() }),
+        ];
+        assert_eq!(left, right);
     }
 
     #[test]
     fn test_tokens_new_2() {
         let s = r#"abc + d_e * _f"#;
         let tokens = Tokens::new(s);
-        let right = Tokens {
-            tokens: vec![
-                (TokenRange::new((1,1),(1,4)), TokenNode::Ident("abc".to_string())),
-                (TokenRange::new((1,4),(1,5)), TokenNode::Spaces),
-                (TokenRange::new((1,5),(1,6)), TokenNode::Symbol('+')),
-                (TokenRange::new((1,6),(1,7)), TokenNode::Spaces),
-                (TokenRange::new((1,7),(1,10)), TokenNode::Ident("d_e".to_string())),
-                (TokenRange::new((1,10),(1,11)), TokenNode::Spaces),
-                (TokenRange::new((1,11),(1,12)), TokenNode::Symbol('*')),
-                (TokenRange::new((1,12),(1,13)), TokenNode::Spaces),
-                (TokenRange::new((1,13),(1,15)), TokenNode::Ident("_f".to_string())),
-            ],
-        };
-        assert_eq!(tokens, right);
+        assert!(tokens.root_tokens.len() == 9);
+        let left: Vec<_> = tokens.root_tokens.iter().map(|x| tokens.token_table.get(*x).unwrap().clone() ).collect();
+        let right = vec![
+            TokenNode::Ident(TokenIdent{ range: TokenRange::new((1,1),(1,4)), ident: "abc".to_string() }),
+            TokenNode::Spaces(TokenSpaces{ range: TokenRange::new((1,4),(1,5)) }),
+            TokenNode::Symbol(TokenSymbol{ range: TokenRange::new((1,5),(1,6)), c: '+' }),
+            TokenNode::Spaces(TokenSpaces{ range: TokenRange::new((1,6),(1,7)) }),
+            TokenNode::Ident(TokenIdent{ range: TokenRange::new((1,7),(1,10)), ident: "d_e".to_string() }),
+            TokenNode::Spaces(TokenSpaces{ range: TokenRange::new((1,10),(1,11)) }),
+            TokenNode::Symbol(TokenSymbol{ range: TokenRange::new((1,11),(1,12)), c: '*' }),
+            TokenNode::Spaces(TokenSpaces{ range: TokenRange::new((1,12),(1,13)) }),
+            TokenNode::Ident(TokenIdent{ range: TokenRange::new((1,13),(1,15)), ident: "_f".to_string() }),
+        ];
+        assert_eq!(left, right);
     }
 }

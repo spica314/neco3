@@ -11,6 +11,9 @@ version = "0.1.0"
 [[package]]
 name = "neco-syn"
 version = "0.1.0"
+dependencies = [
+ "neco-table",
+]
 
 [[package]]
 name = "neco-table"
