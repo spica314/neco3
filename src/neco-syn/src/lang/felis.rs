@@ -1,7 +1,16 @@
+/*
+
 use neco_table::{Id, MainTable};
 
+
+
+#[derive(Debug, Clone)]
+pub struct Project {
+    files: MainTable<ProgramFile>
+}
+
 #[derive(Debug, Clone, PartialEq, Eq, Hash)]
-pub enum TokenNode {
+pub enum Token {
     Symbol(TokenSymbol),
     Ident(TokenIdent),
     Number(TokenNumber),
@@ -48,8 +57,7 @@ impl TokenRange {
 
 #[derive(Debug, Clone)]
 pub struct Tokens {
-    token_table: MainTable<TokenNode>,
-    root_tokens: Vec<Id<TokenNode>>,
+    tokens: Vec<Token>,
 }
 
 impl Tokens {
@@ -194,3 +202,5 @@ mod tests {
         assert_eq!(left, right);
     }
 }
+
+*/
