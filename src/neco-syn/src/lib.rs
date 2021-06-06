@@ -33,14 +33,68 @@ pub struct Span {
     end: usize,
 }
 
+impl Span {
+    pub fn new() -> Span {
+        Span {
+            program_file_id: ProgramFileId(0),
+            begin: 0,
+            end: 0,
+        }
+    }
+    pub fn new_with_span(program_file_id: ProgramFileId, begin: usize, end: usize) -> Span {
+        Span {
+            program_file_id,
+            begin,
+            end,
+        }
+    }
+}
+
 pub trait Token {
     fn span(&self) -> Span;
 }
 
-pub trait Lexer {
-    type Item;
-    fn lex(s: &str) -> Vec<Self::Item>;
+pub trait TokenSetMatch<Set: ?Sized> {
+    fn token_match(set: &Set) -> bool;
 }
+
+pub trait TokenSet {
+    fn token_match<U: TokenSetMatch<Self>>(&self) -> bool {
+        U::token_match(self)
+    }
+}
+
+
+
+pub struct Tokens<T: TokenSet> {
+    ts: Vec<T>,
+    i: usize,
+}
+
+impl<T: TokenSet> Tokens<T> {
+    pub fn new(tokens: Vec<T>) -> Tokens<T> {
+        Tokens {
+            ts: tokens,
+            i: 0,
+        }
+    }
+    pub fn get(&self, i: usize) -> &T {
+        self.ts.get(i).unwrap()
+    }
+    pub fn next(&mut self) {
+        self.i += 1;
+    }
+    pub fn parse<P: Parse<T>>(&mut self) -> ParserResult<P> {
+        P::parse(self)
+    }
+}
+
+/*
+pub trait Lexer {
+    type Item: Token;
+    fn lex(s: &str) -> Tokens<Self::Item>;
+}
+*/
 
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct SyntaxTreeId(usize);
@@ -54,4 +108,14 @@ pub fn gen_next_syntax_tree_id() -> SyntaxTreeId {
 
 pub trait SyntaxTree {
     fn id(&self) -> SyntaxTreeId;
+}
+
+pub enum ParserResult<T> {
+    Ok(T),
+    Fail,
+    Err,
+}
+
+pub trait Parse<T: TokenSet> where Self: Sized {
+    fn parse(tokens: &mut Tokens<T>) -> ParserResult<Self>;
 }

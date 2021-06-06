@@ -2,6 +2,7 @@
 members = [
     "src/neco",
     "src/neco-syn",
+    "src/neco-syn-derive",
     "src/neco-ir",
     "src/neco-types-and-values",
     "src/neco-table",
