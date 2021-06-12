@@ -76,6 +76,43 @@ pub fn derive_parse(input: TokenStream) -> TokenStream {
                 }
             }
         }
+        Data::Enum(data_enum) => {
+            let base = TokenStream::from(quote! {
+                fn parse(tokens: &mut Tokens<#token_set>) -> ParserResult<#ident> {
+                }
+            });
+            let mut base = parse_macro_input!(base as ImplItemMethod);
+
+            let stmt = TokenStream::from(quote! {
+                let initial_i = tokens.get_i();
+            });
+            base.block.stmts.push(parse_macro_input!(stmt as Stmt));
+            for item in &data_enum.variants {
+                let ident2 = item.ident.clone();
+                if let Fields::Unnamed(fields_unnamed) = &item.fields {
+                    let first_ty = fields_unnamed.unnamed.iter().next().unwrap().clone().ty;
+                    let stmt = TokenStream::from(quote! {
+                        if let ParserResult::Ok(t) = tokens.parse::<#first_ty>() {
+                            return ParserResult::Ok(#ident::#ident2(t));
+                        } else {
+                            tokens.set_i(initial_i);
+                        };
+                    });
+                    base.block.stmts.push(parse_macro_input!(stmt as Stmt));
+                } else {
+                    panic!("not Fields::Unnamed");
+                }
+            }
+            let stmt = TokenStream::from(quote! {
+                return ParserResult::Fail;
+            });
+            base.block.stmts.push(parse_macro_input!(stmt as Stmt));
+            quote! {
+                impl Parse<#token_set> for #ident {
+                    #base
+                }
+            }
+        }
         _ => panic!(),
     };
     TokenStream::from(res)

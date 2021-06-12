@@ -53,14 +53,47 @@ pub struct Def {
     expr: TokenLit,
 }
 
+#[derive(Debug, Parse)]
+#[TokenSet(TestToken)]
+pub struct Def2 {
+    eq: TokenEq,
+}
+
+#[derive(Debug, Parse)]
+#[TokenSet(TestToken)]
+pub enum DefOrDef2 {
+    Def(Def),
+    Def2(Def2),
+}
+
 #[test]
-fn test001_success() {
+fn test001_success_1() {
     let mut tokens: Tokens<TestToken> = Tokens::new(vec![
         TestToken::Lit(TokenLit{ c: 'x' }),
         TestToken::Eq(TokenEq{ c: '=' }),
         TestToken::Lit(TokenLit{ c: '1' }),
     ]);
     let t = tokens.parse::<Def>();
+    assert!(t.is_ok());
+}
+
+#[test]
+fn test001_success_2() {
+    let mut tokens: Tokens<TestToken> = Tokens::new(vec![
+        TestToken::Lit(TokenLit{ c: 'x' }),
+        TestToken::Eq(TokenEq{ c: '=' }),
+        TestToken::Lit(TokenLit{ c: '1' }),
+    ]);
+    let t = tokens.parse::<DefOrDef2>();
+    assert!(t.is_ok());
+}
+
+#[test]
+fn test001_success_3() {
+    let mut tokens: Tokens<TestToken> = Tokens::new(vec![
+        TestToken::Eq(TokenEq{ c: '=' }),
+    ]);
+    let t = tokens.parse::<DefOrDef2>();
     assert!(t.is_ok());
 }
 
