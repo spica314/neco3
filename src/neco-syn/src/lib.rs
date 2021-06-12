@@ -50,16 +50,16 @@ impl Span {
     }
 }
 
-pub trait Token {
+pub trait Token : Clone {
     fn span(&self) -> Span;
 }
 
-pub trait TokenSetMatch<Set: ?Sized> {
-    fn token_match(set: &Set) -> bool;
+pub trait TokenSetMatch<Set: ?Sized> : Sized {
+    fn token_match(set: &Set) -> Option<Self>;
 }
 
 pub trait TokenSet {
-    fn token_match<U: TokenSetMatch<Self>>(&self) -> bool {
+    fn token_match<U: TokenSetMatch<Self>>(&self) -> Option<U> {
         U::token_match(self)
     }
 }
@@ -78,8 +78,14 @@ impl<T: TokenSet> Tokens<T> {
             i: 0,
         }
     }
-    pub fn get(&self, i: usize) -> &T {
-        self.ts.get(i).unwrap()
+    pub fn get_i(&self) -> usize {
+        self.i
+    }
+    pub fn set_i(&mut self, i: usize) {
+        self.i = i;
+    }
+    pub fn get_token(&self) -> &T {
+        self.ts.get(self.i).unwrap()
     }
     pub fn next(&mut self) {
         self.i += 1;
@@ -110,10 +116,23 @@ pub trait SyntaxTree {
     fn id(&self) -> SyntaxTreeId;
 }
 
+#[derive(Debug, Clone)]
 pub enum ParserResult<T> {
     Ok(T),
     Fail,
     Err,
+}
+
+impl<T> ParserResult<T> {
+    pub fn is_ok(&self) -> bool {
+        matches!(self, ParserResult::Ok(_))
+    }
+    pub fn is_fail(&self) -> bool {
+        matches!(self, ParserResult::Fail)
+    }
+    pub fn is_err(&self) -> bool {
+        matches!(self, ParserResult::Err)
+    }
 }
 
 pub trait Parse<T: TokenSet> where Self: Sized {

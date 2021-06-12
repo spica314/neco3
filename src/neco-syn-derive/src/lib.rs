@@ -1,5 +1,5 @@
 use proc_macro::{TokenStream};
-use syn::{parse_macro_input, DeriveInput, Data, Fields, Block, ImplItemMethod, Stmt, Type};
+use syn::{parse_macro_input, DeriveInput, Data, Fields, Block, ImplItemMethod, Stmt, Type, ExprStruct, FieldValue};
 use quote::*;
 use std::iter::FromIterator;
 
@@ -12,7 +12,11 @@ pub fn derive_parse(input: TokenStream) -> TokenStream {
         let t = attr.tokens.clone();
         let t = t.into();
         let t = parse_macro_input!(t as Type);
-        token_set = Some(t);
+        if let Type::Paren(type_paren) = t {
+            token_set = Some(type_paren.elem.as_ref().clone());
+        } else {
+            panic!("not paren?");
+        }
     }
     let token_set = token_set.unwrap();
     let data = input.data;
@@ -27,10 +31,54 @@ pub fn derive_parse(input: TokenStream) -> TokenStream {
             let stmt = parse_macro_input!(stmt as Stmt);
             let base = TokenStream::from(quote! {
                 fn parse(tokens: &mut Tokens<#token_set>) -> ParserResult<#ident> {
-                    unimplemented!();
                 }
             });
             let mut base = parse_macro_input!(base as ImplItemMethod);
+
+            let stmt = TokenStream::from(quote! {
+                let initial_i = tokens.get_i();
+            });
+            base.block.stmts.push(parse_macro_input!(stmt as Stmt));
+            if let Fields::Named(fields_named) = data_struct.fields {
+                for item in &fields_named.named {
+                    let ident = item.ident.clone().unwrap();
+                    let ty = item.ty.clone();
+                    let stmt = TokenStream::from(quote! {
+                        let #ident = if let ParserResult::Ok(t) = tokens.parse::<#ty>() {
+                            t
+                        } else {
+                            tokens.set_i(initial_i);
+                            return ParserResult::Fail;
+                        };
+                    });
+                    base.block.stmts.push(parse_macro_input!(stmt as Stmt));
+                }
+                let res = TokenStream::from(quote! {
+                    #ident {
+                    }
+                });
+                let mut res = parse_macro_input!(res as ExprStruct);
+                for item in &fields_named.named {
+                    let ident = item.ident.clone().unwrap();
+                    let ty = item.ty.clone();
+                    let field = TokenStream::from(quote! {
+                        #ident
+                    });
+                    res.fields.push(parse_macro_input!(field as FieldValue));
+                }
+                let stmt = TokenStream::from(quote! {
+                    let res = ParserResult::Ok(#res);
+                });
+                base.block.stmts.push(parse_macro_input!(stmt as Stmt));
+                let stmt = TokenStream::from(quote! {
+                    return res;
+                });
+                base.block.stmts.push(parse_macro_input!(stmt as Stmt));
+
+            } else {
+                panic!("not named field");
+            }
+
             // base.block.stmts.push(stmt);
             /*
             let res = TokenStream::new();
@@ -74,8 +122,26 @@ pub fn derive_token_set(input: TokenStream) -> TokenStream {
                     let first = fields_unnamed.unnamed.iter().next().unwrap().clone();
                     res.push(TokenStream::from(quote!{
                         impl TokenSetMatch<#ident> for #first {
-                            fn token_match(set: &#ident) -> bool {
-                                matches!(set, #ident::#variant_ident(_))
+                            fn token_match(set: &#ident) -> Option<#first> {
+                                match set {
+                                    #ident::#variant_ident(t) => Some(t.clone()),
+                                    _ => None
+                                }
+                            }
+                        }
+                    }));
+                    res.push(TokenStream::from(quote!{
+                        impl Parse<#ident> for #first {
+                            fn parse(tokens: &mut Tokens<#ident>) -> ParserResult<#first> {
+                                let initial_i = tokens.get_i();
+                                let t = tokens.get_token();
+                                if let Some(t) = t.token_match::<#first>() {
+                                    let res = t.clone();
+                                    tokens.next();
+                                    ParserResult::Ok(res)
+                                } else {
+                                    ParserResult::Fail
+                                }
                             }
                         }
                     }));

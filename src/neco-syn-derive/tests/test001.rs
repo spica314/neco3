@@ -2,6 +2,7 @@ use neco_syn_derive::*;
 use neco_syn;
 use neco_syn::{Parse, TokenSetMatch, TokenSet, ParserResult, Tokens};
 
+#[derive(Debug, Clone)]
 pub struct TokenEq {
     c: char,
 }
@@ -12,6 +13,7 @@ impl neco_syn::Token for TokenEq {
     }
 }
 
+#[derive(Debug, Clone)]
 pub struct TokenLit {
     c: char,
 }
@@ -22,6 +24,7 @@ impl neco_syn::Token for TokenLit {
     }
 }
 
+#[derive(Clone)]
 #[derive(TokenSet)]
 pub enum TestToken {
     Eq(TokenEq),
@@ -41,6 +44,7 @@ fn lex(s: &str) -> neco_syn::Tokens<TestToken> {
     neco_syn::Tokens::new(vec![])
 }
 
+#[derive(Debug)]
 #[derive(Parse)]
 #[TokenSet(TestToken)]
 pub struct Def {
@@ -50,8 +54,23 @@ pub struct Def {
 }
 
 #[test]
-#[should_panic]
-fn main() {
-    let mut tokens: Tokens<TestToken> = Tokens::new(vec![]);
+fn test001_success() {
+    let mut tokens: Tokens<TestToken> = Tokens::new(vec![
+        TestToken::Lit(TokenLit{ c: 'x' }),
+        TestToken::Eq(TokenEq{ c: '=' }),
+        TestToken::Lit(TokenLit{ c: '1' }),
+    ]);
     let t = tokens.parse::<Def>();
+    assert!(t.is_ok());
+}
+
+#[test]
+fn test001_fail() {
+    let mut tokens: Tokens<TestToken> = Tokens::new(vec![
+        TestToken::Lit(TokenLit{ c: 'x' }),
+        TestToken::Eq(TokenEq{ c: '=' }),
+        TestToken::Eq(TokenEq{ c: '=' }),
+    ]);
+    let t = tokens.parse::<Def>();
+    assert!(!t.is_ok())
 }
