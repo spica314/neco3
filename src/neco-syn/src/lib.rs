@@ -95,13 +95,6 @@ impl<T: TokenSet> Tokens<T> {
     }
 }
 
-/*
-pub trait Lexer {
-    type Item: Token;
-    fn lex(s: &str) -> Tokens<Self::Item>;
-}
-*/
-
 #[derive(Debug, Clone, Copy, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct SyntaxTreeId(usize);
 
@@ -137,4 +130,24 @@ impl<T> ParserResult<T> {
 
 pub trait Parse<T: TokenSet> where Self: Sized {
     fn parse(tokens: &mut Tokens<T>) -> ParserResult<Self>;
+}
+
+impl<S: TokenSet, T: Parse<S>> Parse<S> for Vec<T> {
+    fn parse(tokens: &mut Tokens<S>) -> ParserResult<Self> {
+        let mut res = vec![];
+        while let ParserResult::Ok(t) = tokens.parse::<T>() {
+            res.push(t);
+        }
+        ParserResult::Ok(res)
+    }
+}
+
+impl<S: TokenSet, T: Parse<S>> Parse<S> for Option<T> {
+    fn parse(tokens: &mut Tokens<S>) -> ParserResult<Self> {
+        if let ParserResult::Ok(t) = tokens.parse::<T>() {
+            ParserResult::Ok(Some(t))
+        } else {
+            ParserResult::Ok(None)
+        }
+    }
 }
