@@ -1,7 +1,6 @@
 use proc_macro::{TokenStream};
-use syn::{parse_macro_input, DeriveInput, Data, Fields, Block, ImplItemMethod, Stmt, Type, ExprStruct, FieldValue};
+use syn::{parse_macro_input, DeriveInput, Data, Fields, ImplItemMethod, Stmt, Type, ExprStruct, FieldValue};
 use quote::*;
-use std::iter::FromIterator;
 
 #[proc_macro_derive(Parse, attributes(TokenSet))]
 pub fn derive_parse(input: TokenStream) -> TokenStream {
@@ -23,12 +22,6 @@ pub fn derive_parse(input: TokenStream) -> TokenStream {
     let ident = input.ident;
     let res = match data {
         Data::Struct(data_struct) => {
-            let mut stmts = TokenStream::new();
-            let stmt = TokenStream::new();
-            let stmt = TokenStream::from(quote! {
-                println!("a");
-            });
-            let stmt = parse_macro_input!(stmt as Stmt);
             let base = TokenStream::from(quote! {
                 fn parse(tokens: &mut Tokens<#token_set>) -> ParserResult<#ident> {
                 }
@@ -60,7 +53,6 @@ pub fn derive_parse(input: TokenStream) -> TokenStream {
                 let mut res = parse_macro_input!(res as ExprStruct);
                 for item in &fields_named.named {
                     let ident = item.ident.clone().unwrap();
-                    let ty = item.ty.clone();
                     let field = TokenStream::from(quote! {
                         #ident
                     });
@@ -78,22 +70,6 @@ pub fn derive_parse(input: TokenStream) -> TokenStream {
             } else {
                 panic!("not named field");
             }
-
-            // base.block.stmts.push(stmt);
-            /*
-            let res = TokenStream::new();
-            */
-
-            /*
-            quote! {
-                impl Parse<#TokenSet> for #ident {
-                    fn parse(tokens: TokenSet<#TokenSet>) -> ParserResult<#ident> {
-                        #stmts
-                        unimplemented!()
-                    }
-                }
-            }
-            */
             quote! {
                 impl Parse<#token_set> for #ident {
                     #base
