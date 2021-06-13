@@ -1,5 +1,5 @@
-use std::{collections::HashMap, marker::PhantomData};
 use std::hash::{Hash, Hasher};
+use std::{collections::HashMap, marker::PhantomData};
 
 #[derive(Debug)]
 pub struct Id<T> {
@@ -79,7 +79,6 @@ impl<T> MainTable<T> {
     }
 }
 
-
 #[derive(Debug, Clone)]
 pub struct SubTable<T, U> {
     map: HashMap<Id<T>, U>,
@@ -117,8 +116,13 @@ mod tests {
             variables: MainTable::new(),
             visited: SubTable::new(),
         };
-        let id = variable_table.variables.insert(Variable("name".to_string()));
+        let id = variable_table
+            .variables
+            .insert(Variable("name".to_string()));
         variable_table.visited.insert(id, true);
-        assert_eq!(variable_table.variables.get(id), Some(&Variable("name".to_string())));
+        assert_eq!(
+            variable_table.variables.get(id),
+            Some(&Variable("name".to_string()))
+        );
     }
 }

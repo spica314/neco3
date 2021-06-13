@@ -1,6 +1,9 @@
-use proc_macro::{TokenStream};
-use syn::{parse_macro_input, DeriveInput, Data, Fields, ImplItemMethod, Stmt, Type, ExprStruct, FieldValue, ExprMatch, Arm};
+use proc_macro::TokenStream;
 use quote::*;
+use syn::{
+    parse_macro_input, Arm, Data, DeriveInput, ExprMatch, ExprStruct, FieldValue, Fields,
+    ImplItemMethod, Stmt, Type,
+};
 
 #[proc_macro_derive(SyntaxTree, attributes(TokenSet))]
 pub fn derive_syntax_tree(input: TokenStream) -> TokenStream {
@@ -76,7 +79,6 @@ pub fn derive_syntax_tree(input: TokenStream) -> TokenStream {
                     return res;
                 });
                 base.block.stmts.push(parse_macro_input!(stmt as Stmt));
-
             } else {
                 panic!("not named field");
             }
@@ -161,14 +163,14 @@ pub fn derive_token_set(input: TokenStream) -> TokenStream {
     let res = match data {
         Data::Enum(data_enum) => {
             let mut res = vec![];
-            res.push(TokenStream::from(quote!{
+            res.push(TokenStream::from(quote! {
                 impl neco_syn::TokenSet for #ident {}
             }));
             for variant in data_enum.variants {
                 let variant_ident = variant.ident.clone();
                 if let Fields::Unnamed(fields_unnamed) = variant.fields {
                     let first = fields_unnamed.unnamed.iter().next().unwrap().clone();
-                    res.push(TokenStream::from(quote!{
+                    res.push(TokenStream::from(quote! {
                         impl neco_syn::TokenSetMatch<#ident> for #first {
                             fn token_match(set: &#ident) -> Option<#first> {
                                 match set {

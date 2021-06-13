@@ -1,5 +1,5 @@
+use neco_syn::{Span, SyntaxTreeId};
 use neco_syn_derive::*;
-use neco_syn::{SyntaxTreeId, Span};
 
 #[derive(Debug, Clone, Token)]
 pub struct TokenEq {
@@ -21,8 +21,7 @@ pub enum TestToken {
     Lit(TokenLit),
 }
 
-#[derive(Debug)]
-#[derive(SyntaxTree)]
+#[derive(Debug, SyntaxTree)]
 #[TokenSet(TestToken)]
 pub struct Def {
     id: SyntaxTreeId,
@@ -53,9 +52,21 @@ mod tests {
     #[test]
     fn test001_success_1() {
         let mut tokens: Tokens<TestToken> = Tokens::new(vec![
-            TestToken::Lit(TokenLit{ id: gen_next_syntax_tree_id(), span: Span::new(), c: 'x' }),
-            TestToken::Eq(TokenEq{ id: gen_next_syntax_tree_id(), span: Span::new(), c: '=' }),
-            TestToken::Lit(TokenLit{ id: gen_next_syntax_tree_id(), span: Span::new(), c: '1' }),
+            TestToken::Lit(TokenLit {
+                id: gen_next_syntax_tree_id(),
+                span: Span::new(),
+                c: 'x',
+            }),
+            TestToken::Eq(TokenEq {
+                id: gen_next_syntax_tree_id(),
+                span: Span::new(),
+                c: '=',
+            }),
+            TestToken::Lit(TokenLit {
+                id: gen_next_syntax_tree_id(),
+                span: Span::new(),
+                c: '1',
+            }),
         ]);
         let t = tokens.parse::<Def>();
         assert!(t.is_ok());
@@ -64,9 +75,21 @@ mod tests {
     #[test]
     fn test001_success_2() {
         let mut tokens: Tokens<TestToken> = Tokens::new(vec![
-            TestToken::Lit(TokenLit{ id: gen_next_syntax_tree_id(), span: Span::new(), c: 'x' }),
-            TestToken::Eq(TokenEq{ id: gen_next_syntax_tree_id(), span: Span::new(), c: '=' }),
-            TestToken::Lit(TokenLit{ id: gen_next_syntax_tree_id(), span: Span::new(), c: '1' }),
+            TestToken::Lit(TokenLit {
+                id: gen_next_syntax_tree_id(),
+                span: Span::new(),
+                c: 'x',
+            }),
+            TestToken::Eq(TokenEq {
+                id: gen_next_syntax_tree_id(),
+                span: Span::new(),
+                c: '=',
+            }),
+            TestToken::Lit(TokenLit {
+                id: gen_next_syntax_tree_id(),
+                span: Span::new(),
+                c: '1',
+            }),
         ]);
         let t = tokens.parse::<DefOrDef2>();
         assert!(t.is_ok());
@@ -74,9 +97,11 @@ mod tests {
 
     #[test]
     fn test001_success_3() {
-        let mut tokens: Tokens<TestToken> = Tokens::new(vec![
-            TestToken::Eq(TokenEq{ id: gen_next_syntax_tree_id(), span: Span::new(), c: '=' }),
-        ]);
+        let mut tokens: Tokens<TestToken> = Tokens::new(vec![TestToken::Eq(TokenEq {
+            id: gen_next_syntax_tree_id(),
+            span: Span::new(),
+            c: '=',
+        })]);
         let t = tokens.parse::<DefOrDef2>();
         assert!(t.is_ok());
     }
@@ -84,12 +109,23 @@ mod tests {
     #[test]
     fn test001_fail() {
         let mut tokens: Tokens<TestToken> = Tokens::new(vec![
-            TestToken::Lit(TokenLit{ id: gen_next_syntax_tree_id(), span: Span::new(), c: 'x' }),
-            TestToken::Eq(TokenEq{ id: gen_next_syntax_tree_id(), span: Span::new(), c: '=' }),
-            TestToken::Eq(TokenEq{ id: gen_next_syntax_tree_id(), span: Span::new(), c: '=' }),
+            TestToken::Lit(TokenLit {
+                id: gen_next_syntax_tree_id(),
+                span: Span::new(),
+                c: 'x',
+            }),
+            TestToken::Eq(TokenEq {
+                id: gen_next_syntax_tree_id(),
+                span: Span::new(),
+                c: '=',
+            }),
+            TestToken::Eq(TokenEq {
+                id: gen_next_syntax_tree_id(),
+                span: Span::new(),
+                c: '=',
+            }),
         ]);
         let t = tokens.parse::<Def>();
         assert!(!t.is_ok())
     }
 }
-

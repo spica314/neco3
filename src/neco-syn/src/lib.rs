@@ -14,7 +14,9 @@ pub struct ProgramFileId(usize);
 
 const NEXT_PROGRAM_FILE_ID: OnceCell<ProgramFileId> = OnceCell::new();
 pub fn gen_next_program_file_id() -> ProgramFileId {
-    let res = NEXT_PROGRAM_FILE_ID.get_or_init(|| ProgramFileId(1)).clone();
+    let res = NEXT_PROGRAM_FILE_ID
+        .get_or_init(|| ProgramFileId(1))
+        .clone();
     NEXT_PROGRAM_FILE_ID.set(ProgramFileId(res.0 + 1)).unwrap();
     res.clone()
 }
@@ -50,11 +52,11 @@ impl Span {
     }
 }
 
-pub trait Token : Clone {
+pub trait Token: Clone {
     fn span(&self) -> Span;
 }
 
-pub trait TokenSetMatch<Set: ?Sized> : Sized {
+pub trait TokenSetMatch<Set: ?Sized>: Sized {
     fn token_match(set: &Set) -> Option<Self>;
 }
 
@@ -64,8 +66,6 @@ pub trait TokenSet {
     }
 }
 
-
-
 pub struct Tokens<T: TokenSet> {
     ts: Vec<T>,
     i: usize,
@@ -73,10 +73,7 @@ pub struct Tokens<T: TokenSet> {
 
 impl<T: TokenSet> Tokens<T> {
     pub fn new(tokens: Vec<T>) -> Tokens<T> {
-        Tokens {
-            ts: tokens,
-            i: 0,
-        }
+        Tokens { ts: tokens, i: 0 }
     }
     pub fn get_i(&self) -> usize {
         self.i
@@ -139,7 +136,10 @@ pub struct Optional<T> {
     pub inner: Option<T>,
 }
 
-pub trait SyntaxTree<T: TokenSet> where Self: Sized {
+pub trait SyntaxTree<T: TokenSet>
+where
+    Self: Sized,
+{
     fn parse(tokens: &mut Tokens<T>) -> ParserResult<Self>;
     fn id(&self) -> SyntaxTreeId;
 }
@@ -179,7 +179,6 @@ impl<S: TokenSet, T: SyntaxTree<S>> SyntaxTree<S> for Rep1<T> {
         self.id
     }
 }
-
 
 impl<S: TokenSet, T: SyntaxTree<S>> SyntaxTree<S> for Optional<T> {
     fn parse(tokens: &mut Tokens<S>) -> ParserResult<Self> {

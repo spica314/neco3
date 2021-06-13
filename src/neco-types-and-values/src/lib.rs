@@ -20,22 +20,15 @@ pub enum Type {
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum Value {
-    Bool {
-        v: bool,
-    },
-    Int {
-        v: BitVector,
-    },
-    IntString {
-        s: String,
-    },
+    Bool { v: bool },
+    Int { v: BitVector },
+    IntString { s: String },
 }
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub enum TypeRel {
     Same(AnnotationId, AnnotationId),
 }
-
 
 #[derive(Debug, Clone, PartialEq, Eq, PartialOrd, Ord, Hash)]
 pub struct Annotator {
