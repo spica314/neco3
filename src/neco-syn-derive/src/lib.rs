@@ -1,9 +1,9 @@
 use proc_macro::{TokenStream};
-use syn::{parse_macro_input, DeriveInput, Data, Fields, ImplItemMethod, Stmt, Type, ExprStruct, FieldValue};
+use syn::{parse_macro_input, DeriveInput, Data, Fields, ImplItemMethod, Stmt, Type, ExprStruct, FieldValue, ExprMatch, Arm};
 use quote::*;
 
-#[proc_macro_derive(Parse, attributes(TokenSet))]
-pub fn derive_parse(input: TokenStream) -> TokenStream {
+#[proc_macro_derive(SyntaxTree, attributes(TokenSet))]
+pub fn derive_syntax_tree(input: TokenStream) -> TokenStream {
     let input = parse_macro_input!(input as DeriveInput);
     let mut token_set = None;
     assert!(input.attrs.len() == 1);
@@ -35,6 +35,9 @@ pub fn derive_parse(input: TokenStream) -> TokenStream {
             if let Fields::Named(fields_named) = data_struct.fields {
                 for item in &fields_named.named {
                     let ident = item.ident.clone().unwrap();
+                    if ident.to_string() == "id" {
+                        continue;
+                    }
                     let ty = item.ty.clone();
                     let stmt = TokenStream::from(quote! {
                         let #ident = if let ParserResult::Ok(t) = tokens.parse::<#ty>() {
@@ -51,8 +54,15 @@ pub fn derive_parse(input: TokenStream) -> TokenStream {
                     }
                 });
                 let mut res = parse_macro_input!(res as ExprStruct);
+                let field = TokenStream::from(quote! {
+                    id: gen_next_syntax_tree_id()
+                });
+                res.fields.push(parse_macro_input!(field as FieldValue));
                 for item in &fields_named.named {
                     let ident = item.ident.clone().unwrap();
+                    if ident.to_string() == "id" {
+                        continue;
+                    }
                     let field = TokenStream::from(quote! {
                         #ident
                     });
@@ -71,8 +81,11 @@ pub fn derive_parse(input: TokenStream) -> TokenStream {
                 panic!("not named field");
             }
             quote! {
-                impl Parse<#token_set> for #ident {
+                impl SyntaxTree<#token_set> for #ident {
                     #base
+                    fn id(&self) -> SyntaxTreeId {
+                        self.id
+                    }
                 }
             }
         }
@@ -107,9 +120,31 @@ pub fn derive_parse(input: TokenStream) -> TokenStream {
                 return ParserResult::Fail;
             });
             base.block.stmts.push(parse_macro_input!(stmt as Stmt));
+
+            let base2 = TokenStream::from(quote! {
+                match self {
+                }
+            });
+            let mut base2 = parse_macro_input!(base2 as ExprMatch);
+            for item in &data_enum.variants {
+                let ident2 = item.ident.clone();
+                if let Fields::Unnamed(fields_unnamed) = &item.fields {
+                    let first_ty = fields_unnamed.unnamed.iter().next().unwrap().clone().ty;
+                    let arm = TokenStream::from(quote! {
+                        #ident::#ident2(t) => t.id(),
+                    });
+                    base2.arms.push(parse_macro_input!(arm as Arm));
+                } else {
+                    panic!("not Fields::Unnamed");
+                }
+            }
+
             quote! {
-                impl Parse<#token_set> for #ident {
+                impl SyntaxTree<#token_set> for #ident {
                     #base
+                    fn id(&self) -> SyntaxTreeId {
+                        #base2
+                    }
                 }
             }
         }
@@ -144,7 +179,7 @@ pub fn derive_token_set(input: TokenStream) -> TokenStream {
                         }
                     }));
                     res.push(TokenStream::from(quote!{
-                        impl Parse<#ident> for #first {
+                        impl SyntaxTree<#ident> for #first {
                             fn parse(tokens: &mut Tokens<#ident>) -> ParserResult<#first> {
                                 let initial_i = tokens.get_i();
                                 let t = tokens.get_token();
@@ -155,6 +190,9 @@ pub fn derive_token_set(input: TokenStream) -> TokenStream {
                                 } else {
                                     ParserResult::Fail
                                 }
+                            }
+                            fn id(&self) -> SyntaxTreeId {
+                                self.id
                             }
                         }
                     }));

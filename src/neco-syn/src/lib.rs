@@ -90,7 +90,7 @@ impl<T: TokenSet> Tokens<T> {
     pub fn next(&mut self) {
         self.i += 1;
     }
-    pub fn parse<P: Parse<T>>(&mut self) -> ParserResult<P> {
+    pub fn parse<P: SyntaxTree<T>>(&mut self) -> ParserResult<P> {
         P::parse(self)
     }
 }
@@ -103,10 +103,6 @@ pub fn gen_next_syntax_tree_id() -> SyntaxTreeId {
     let res = NEXT_SYNTAX_TREE_ID.get_or_init(|| SyntaxTreeId(1)).clone();
     NEXT_SYNTAX_TREE_ID.set(SyntaxTreeId(res.0 + 1)).unwrap();
     res.clone()
-}
-
-pub trait SyntaxTree {
-    fn id(&self) -> SyntaxTreeId;
 }
 
 #[derive(Debug, Clone)]
@@ -128,37 +124,90 @@ impl<T> ParserResult<T> {
     }
 }
 
-pub trait Parse<T: TokenSet> where Self: Sized {
-    fn parse(tokens: &mut Tokens<T>) -> ParserResult<Self>;
+pub struct Rep0<T> {
+    pub id: SyntaxTreeId,
+    pub ts: Vec<T>,
 }
 
-impl<S: TokenSet, T: Parse<S>> Parse<S> for Vec<T> {
+pub struct Rep1<T> {
+    pub id: SyntaxTreeId,
+    pub ts: Vec<T>,
+}
+
+pub struct Optional<T> {
+    pub id: SyntaxTreeId,
+    pub inner: Option<T>,
+}
+
+pub trait SyntaxTree<T: TokenSet> where Self: Sized {
+    fn parse(tokens: &mut Tokens<T>) -> ParserResult<Self>;
+    fn id(&self) -> SyntaxTreeId;
+}
+
+impl<S: TokenSet, T: SyntaxTree<S>> SyntaxTree<S> for Rep0<T> {
     fn parse(tokens: &mut Tokens<S>) -> ParserResult<Self> {
         let mut res = vec![];
         while let ParserResult::Ok(t) = tokens.parse::<T>() {
             res.push(t);
         }
-        ParserResult::Ok(res)
+        ParserResult::Ok(Rep0 {
+            id: gen_next_syntax_tree_id(),
+            ts: res,
+        })
+    }
+    fn id(&self) -> SyntaxTreeId {
+        self.id
     }
 }
 
-impl<S: TokenSet, T: Parse<S>> Parse<S> for Option<T> {
+impl<S: TokenSet, T: SyntaxTree<S>> SyntaxTree<S> for Rep1<T> {
+    fn parse(tokens: &mut Tokens<S>) -> ParserResult<Self> {
+        let mut res = vec![];
+        while let ParserResult::Ok(t) = tokens.parse::<T>() {
+            res.push(t);
+        }
+        if res.len() >= 1 {
+            ParserResult::Ok(Rep1 {
+                id: gen_next_syntax_tree_id(),
+                ts: res,
+            })
+        } else {
+            ParserResult::Fail
+        }
+    }
+    fn id(&self) -> SyntaxTreeId {
+        self.id
+    }
+}
+
+
+impl<S: TokenSet, T: SyntaxTree<S>> SyntaxTree<S> for Optional<T> {
     fn parse(tokens: &mut Tokens<S>) -> ParserResult<Self> {
         if let ParserResult::Ok(t) = tokens.parse::<T>() {
-            ParserResult::Ok(Some(t))
+            ParserResult::Ok(Optional {
+                id: gen_next_syntax_tree_id(),
+                inner: Some(t),
+            })
         } else {
-            ParserResult::Ok(None)
+            ParserResult::Ok(Optional {
+                id: gen_next_syntax_tree_id(),
+                inner: None,
+            })
         }
+    }
+    fn id(&self) -> SyntaxTreeId {
+        self.id
     }
 }
 
 // accept: (empty), T, T P, T P T, T P T P, T P T P T, ...
 pub struct Punctuated<T, P> {
+    pub id: SyntaxTreeId,
     pub ts: Vec<T>,
     pub ps: Vec<P>,
 }
 
-impl<S: TokenSet, T: Parse<S>, P: Parse<S>> Parse<S> for Punctuated<T, P> {
+impl<S: TokenSet, T: SyntaxTree<S>, P: SyntaxTree<S>> SyntaxTree<S> for Punctuated<T, P> {
     fn parse(tokens: &mut Tokens<S>) -> ParserResult<Self> {
         let mut ts = vec![];
         let mut ps = vec![];
@@ -175,8 +224,12 @@ impl<S: TokenSet, T: Parse<S>, P: Parse<S>> Parse<S> for Punctuated<T, P> {
             }
         }
         ParserResult::Ok(Punctuated {
+            id: gen_next_syntax_tree_id(),
             ts,
             ps,
         })
+    }
+    fn id(&self) -> SyntaxTreeId {
+        self.id
     }
 }
