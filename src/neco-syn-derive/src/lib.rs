@@ -23,7 +23,7 @@ pub fn derive_syntax_tree(input: TokenStream) -> TokenStream {
     let res = match data {
         Data::Struct(data_struct) => {
             let base = TokenStream::from(quote! {
-                fn parse(tokens: &mut Tokens<#token_set>) -> ParserResult<#ident> {
+                fn parse(tokens: &mut neco_syn::Tokens<#token_set>) -> neco_syn::ParserResult<#ident> {
                 }
             });
             let mut base = parse_macro_input!(base as ImplItemMethod);
@@ -40,11 +40,11 @@ pub fn derive_syntax_tree(input: TokenStream) -> TokenStream {
                     }
                     let ty = item.ty.clone();
                     let stmt = TokenStream::from(quote! {
-                        let #ident = if let ParserResult::Ok(t) = tokens.parse::<#ty>() {
+                        let #ident = if let neco_syn::ParserResult::Ok(t) = tokens.parse::<#ty>() {
                             t
                         } else {
                             tokens.set_i(initial_i);
-                            return ParserResult::Fail;
+                            return neco_syn::ParserResult::Fail;
                         };
                     });
                     base.block.stmts.push(parse_macro_input!(stmt as Stmt));
@@ -55,7 +55,7 @@ pub fn derive_syntax_tree(input: TokenStream) -> TokenStream {
                 });
                 let mut res = parse_macro_input!(res as ExprStruct);
                 let field = TokenStream::from(quote! {
-                    id: gen_next_syntax_tree_id()
+                    id: neco_syn::gen_next_syntax_tree_id()
                 });
                 res.fields.push(parse_macro_input!(field as FieldValue));
                 for item in &fields_named.named {
@@ -69,7 +69,7 @@ pub fn derive_syntax_tree(input: TokenStream) -> TokenStream {
                     res.fields.push(parse_macro_input!(field as FieldValue));
                 }
                 let stmt = TokenStream::from(quote! {
-                    let res = ParserResult::Ok(#res);
+                    let res = neco_syn::ParserResult::Ok(#res);
                 });
                 base.block.stmts.push(parse_macro_input!(stmt as Stmt));
                 let stmt = TokenStream::from(quote! {
@@ -81,9 +81,9 @@ pub fn derive_syntax_tree(input: TokenStream) -> TokenStream {
                 panic!("not named field");
             }
             quote! {
-                impl SyntaxTree<#token_set> for #ident {
+                impl neco_syn::SyntaxTree<#token_set> for #ident {
                     #base
-                    fn id(&self) -> SyntaxTreeId {
+                    fn id(&self) -> neco_syn::SyntaxTreeId {
                         self.id
                     }
                 }
@@ -91,7 +91,7 @@ pub fn derive_syntax_tree(input: TokenStream) -> TokenStream {
         }
         Data::Enum(data_enum) => {
             let base = TokenStream::from(quote! {
-                fn parse(tokens: &mut Tokens<#token_set>) -> ParserResult<#ident> {
+                fn parse(tokens: &mut neco_syn::Tokens<#token_set>) -> neco_syn::ParserResult<#ident> {
                 }
             });
             let mut base = parse_macro_input!(base as ImplItemMethod);
@@ -105,8 +105,8 @@ pub fn derive_syntax_tree(input: TokenStream) -> TokenStream {
                 if let Fields::Unnamed(fields_unnamed) = &item.fields {
                     let first_ty = fields_unnamed.unnamed.iter().next().unwrap().clone().ty;
                     let stmt = TokenStream::from(quote! {
-                        if let ParserResult::Ok(t) = tokens.parse::<#first_ty>() {
-                            return ParserResult::Ok(#ident::#ident2(t));
+                        if let neco_syn::ParserResult::Ok(t) = tokens.parse::<#first_ty>() {
+                            return neco_syn::ParserResult::Ok(#ident::#ident2(t));
                         } else {
                             tokens.set_i(initial_i);
                         };
@@ -117,7 +117,7 @@ pub fn derive_syntax_tree(input: TokenStream) -> TokenStream {
                 }
             }
             let stmt = TokenStream::from(quote! {
-                return ParserResult::Fail;
+                return neco_syn::ParserResult::Fail;
             });
             base.block.stmts.push(parse_macro_input!(stmt as Stmt));
 
@@ -140,9 +140,9 @@ pub fn derive_syntax_tree(input: TokenStream) -> TokenStream {
             }
 
             quote! {
-                impl SyntaxTree<#token_set> for #ident {
+                impl neco_syn::SyntaxTree<#token_set> for #ident {
                     #base
-                    fn id(&self) -> SyntaxTreeId {
+                    fn id(&self) -> neco_syn::SyntaxTreeId {
                         #base2
                     }
                 }
@@ -162,14 +162,14 @@ pub fn derive_token_set(input: TokenStream) -> TokenStream {
         Data::Enum(data_enum) => {
             let mut res = vec![];
             res.push(TokenStream::from(quote!{
-                impl TokenSet for #ident {}
+                impl neco_syn::TokenSet for #ident {}
             }));
             for variant in data_enum.variants {
                 let variant_ident = variant.ident.clone();
                 if let Fields::Unnamed(fields_unnamed) = variant.fields {
                     let first = fields_unnamed.unnamed.iter().next().unwrap().clone();
                     res.push(TokenStream::from(quote!{
-                        impl TokenSetMatch<#ident> for #first {
+                        impl neco_syn::TokenSetMatch<#ident> for #first {
                             fn token_match(set: &#ident) -> Option<#first> {
                                 match set {
                                     #ident::#variant_ident(t) => Some(t.clone()),
@@ -179,19 +179,20 @@ pub fn derive_token_set(input: TokenStream) -> TokenStream {
                         }
                     }));
                     res.push(TokenStream::from(quote!{
-                        impl SyntaxTree<#ident> for #first {
-                            fn parse(tokens: &mut Tokens<#ident>) -> ParserResult<#first> {
+                        impl neco_syn::SyntaxTree<#ident> for #first {
+                            fn parse(tokens: &mut neco_syn::Tokens<#ident>) -> neco_syn::ParserResult<#first> {
+                                use neco_syn::TokenSet;
                                 let initial_i = tokens.get_i();
                                 let t = tokens.get_token();
                                 if let Some(t) = t.token_match::<#first>() {
                                     let res = t.clone();
                                     tokens.next();
-                                    ParserResult::Ok(res)
+                                    neco_syn::ParserResult::Ok(res)
                                 } else {
-                                    ParserResult::Fail
+                                    neco_syn::ParserResult::Fail
                                 }
                             }
-                            fn id(&self) -> SyntaxTreeId {
+                            fn id(&self) -> neco_syn::SyntaxTreeId {
                                 self.id
                             }
                         }
@@ -205,4 +206,24 @@ pub fn derive_token_set(input: TokenStream) -> TokenStream {
     let mut res2 = TokenStream::new();
     res2.extend(res);
     res2
+}
+
+#[proc_macro_derive(Token)]
+pub fn derive_token(input: TokenStream) -> TokenStream {
+    let input = parse_macro_input!(input as DeriveInput);
+    let data = input.data;
+    let ident = input.ident;
+    let res = match data {
+        Data::Struct(data_struct) => {
+            quote! {
+                impl neco_syn::Token for #ident {
+                    fn span(&self) -> neco_syn::Span {
+                        self.span
+                    }
+                }
+            }
+        }
+        _ => panic!(),
+    };
+    TokenStream::from(res)
 }
