@@ -151,3 +151,32 @@ impl<S: TokenSet, T: Parse<S>> Parse<S> for Option<T> {
         }
     }
 }
+
+// accept: (empty), T, T P, T P T, T P T P, T P T P T, ...
+pub struct Punctuated<T, P> {
+    pub ts: Vec<T>,
+    pub ps: Vec<P>,
+}
+
+impl<S: TokenSet, T: Parse<S>, P: Parse<S>> Parse<S> for Punctuated<T, P> {
+    fn parse(tokens: &mut Tokens<S>) -> ParserResult<Self> {
+        let mut ts = vec![];
+        let mut ps = vec![];
+        loop {
+            if let ParserResult::Ok(t) = tokens.parse::<T>() {
+                ts.push(t);
+            } else {
+                break;
+            }
+            if let ParserResult::Ok(p) = tokens.parse::<P>() {
+                ps.push(p);
+            } else {
+                break;
+            }
+        }
+        ParserResult::Ok(Punctuated {
+            ts,
+            ps,
+        })
+    }
+}
